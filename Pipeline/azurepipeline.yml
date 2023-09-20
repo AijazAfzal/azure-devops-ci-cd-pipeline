@@ -1,0 +1,94 @@
+trigger:
+    batch: true
+    branches:
+        include:
+        - main
+        - feature/backend/Aijaz
+        - develop
+    paths:
+        include:
+        - "./backend/*"
+
+pool:
+  name: 'Azure Pipelines'
+
+
+variables:
+  isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')] #not used
+  isDev: $[eq(variables['Build.SourceBranch'], 'refs/heads/develop')] #not used
+  test: ""
+  VMIMAGE: "windows-latest"
+
+stages:
+- template: Templates/stage_level_templates/test_build_stage_template.yml # stage template to test, build and push
+  parameters:
+    projectFolder: backend/Snelstart.Uservoice/Snelstart.Uservoice.Api.sln #${{variables.projectFolder}}
+    buildOutputFolder: $(BUILDOUTPUTFOLDER) #${{variables.buildOutputFolder}}
+    sourceFolder: $(SOURCEFOLDER) #${{variables.sourceFolder}}
+    vmImageName: $(VMIMAGE)
+
+- template: Templates/stage_level_templates/az_deployment_stage_template.yml # stage template for azure resource deployment to Develop
+  parameters:
+    vmImageName : $(VMIMAGE)
+    azureSubscription : "demoservice"
+    resourceGroup : "demoresource"
+    bicepFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.bicep"
+    parameterFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.parameters.dev.json"
+    jobName : "resourcedeployment"
+    jobDescription : "deployemnt of resources"
+    scriptType : "bash"
+    environment: 'dev'
+    deploy: true
+    webAppName: "uservoice-web-dev"
+    
+- template: Templates/stage_level_templates/app_deployment_stage_template.yml #stage template for application deployment
+  parameters:
+    serviceConnection: 'demoservice'
+    subscriptionId: 'e9fb8d70-ecdf-4818-b2d0-2841fe6d0841'
+    environment: 'dev'
+    appType: 'webApp'
+    webAppName: "uservoice-web-dev"
+
+- template: Templates/stage_level_templates/az_deployment_stage_template.yml # stage template for azure resource deployment to Develop
+  parameters:
+    vmImageName : $(VMIMAGE)
+    azureSubscription : "demoservice"
+    resourceGroup : "rg-test"
+    bicepFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.bicep"
+    parameterFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.parameters.test.json"
+    jobName : "resourcedeployment"
+    jobDescription : "deployemnt of resources"
+    scriptType : "bash"
+    environment: 'test'
+    deploy: true
+    webAppName: "uservoice-web-test"
+    
+- template: Templates/stage_level_templates/app_deployment_stage_template.yml #stage template for application deployment
+  parameters:
+    serviceConnection: 'demoservice'
+    subscriptionId: 'e9fb8d70-ecdf-4818-b2d0-2841fe6d0841'
+    environment: 'test'
+    appType: 'webApp'
+    webAppName: "uservoice-web-test"    
+
+- template: Templates/stage_level_templates/az_deployment_stage_template.yml # stage template for azure resource deployment to Develop
+  parameters:
+    vmImageName : $(VMIMAGE)
+    azureSubscription : "demoservice"
+    resourceGroup : "rg-prod"
+    bicepFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.bicep"
+    parameterFilePath : "backend/Snelstart.Uservoice/Snelstart.Uservoice.AzureDeployment/azuredeploy.parameters.prod.json"
+    jobName : "resourcedeployment"
+    jobDescription : "deployemnt of resources"
+    scriptType : "bash"
+    environment: 'prod'
+    deploy: true
+    webAppName: "uservoice-web-prod"
+
+- template: Templates/stage_level_templates/app_deployment_stage_template.yml #stage template for application deployment
+  parameters:
+    serviceConnection: 'demoservice'
+    subscriptionId: 'e9fb8d70-ecdf-4818-b2d0-2841fe6d0841'
+    environment: 'prod'
+    appType: 'webApp'
+    webAppName: "uservoice-web-prod"
